@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: check-mk
+  namespace: check-mk
+spec:
+  selector:
+    matchLabels:
+      app: check-mk
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: check-mk
+    spec:
+      containers:
+      - name: check-mk-server
+        imagePullPolicy: IfNotPresent
+        image: checkmk/check-mk-raw:1.6.0-latest
+        ports:
+          - containerPort: 5000
+        volumeMounts:
+         - name: check-mk-config
+           mountPath: /omd/sites
+         - name: check-mk-backups
+           mountPath: /backups
+         - name: ssh-key
+           readOnly: true
+           mountPath: '/root/.ssh/'
+      volumes:
+        - name: check-mk-config
+          nfs:
+            server: nfs-server
+            path: /mnt/nfs/communityEvents/wordpress

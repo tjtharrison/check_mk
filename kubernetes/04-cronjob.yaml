@@ -1,0 +1,47 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: backup-cmk
+  namespace: check-mk
+spec:
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 0
+  failedJobsHistoryLimit: 0
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: check-mk-backup
+            image: checkmk/check-mk-raw:1.6.0-latest
+            command: ["/bin/sh","-c"]
+            env:
+              - name: BACKUP_SERVER
+                value: "harrison-nas.harrison.lan"
+              - name: BACKUP_USER
+                value: "backupuser"
+              - name: BACKUP_DIR
+                value: "/data/server-backups/check-mk/"
+            args: ["omd backup -N cmk /backups/cmk-$(date +%F).tar.gz && \
+                    rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i /root/.ssh/ssh-privatekey' /backups/cmk-$(date +%F).tar.gz \
+                    $BACKUP_USER@$BACKUP_SERVER:$BACKUP_DIR"]
+            volumeMounts:
+                - name: check-mk-config
+                  mountPath: /omd/sites
+                - name: check-mk-backups
+                  mountPath: /backups
+                - name: ssh-key
+                  readOnly: true
+                  mountPath: '/root/.ssh/'
+          volumes:
+            - name: check-mk-config
+              persistentVolumeClaim:
+                claimName: "check-mk-config-local-storage"
+            - name: check-mk-backups
+              persistentVolumeClaim:
+                claimName: "check-mk-backup-local-storage"
+            - name: ssh-key
+              secret:
+                secretName: backup-ssh-key
+                defaultMode: 0600 
+          restartPolicy: OnFailure

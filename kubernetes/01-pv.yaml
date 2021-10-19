@@ -1,0 +1,31 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: check-mk-config-local-storage
+  labels:
+    type: local-storage
+spec:
+  storageClassName: "local-storage"
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/check-mk-config"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mongo-lc
+  namespace: lc
+  labels:
+   db: mongo
+spec:
+  capacity:
+   storage: 1Gi
+  volumeMode: Filesystem
+  accessModes:
+   - ReadWriteOnce
+  local:
+   path: /mnt/data/mongo
